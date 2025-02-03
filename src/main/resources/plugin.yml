@@ -1,0 +1,9 @@
+name: AFGoodItemsLore
+version: '${project.version}'
+main: ru.anton_flame.afgooditemslore.AFGoodItemsLore
+api-version: '1.16'
+author: anton_flame
+commands:
+  afgooditemslore:
+    aliases:
+      - afgil
