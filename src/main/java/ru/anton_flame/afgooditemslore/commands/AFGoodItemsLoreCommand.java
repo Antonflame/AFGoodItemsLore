@@ -21,7 +21,7 @@ public class AFGoodItemsLoreCommand implements CommandExecutor, TabCompleter {
     @Override
     public boolean onCommand(@NotNull CommandSender commandSender, @NotNull Command command, @NotNull String s, @NotNull String[] strings) {
         if (strings.length < 1 || !strings[0].equalsIgnoreCase("reload")) {
-            for (String message : plugin.getConfig().getStringList("messages.help")) {
+            for (String message : plugin.help) {
                 commandSender.sendMessage(Hex.color(message));
             }
             return false;
@@ -29,12 +29,12 @@ public class AFGoodItemsLoreCommand implements CommandExecutor, TabCompleter {
 
         if (strings.length == 1 && strings[0].equalsIgnoreCase("reload")) {
             if (!commandSender.hasPermission("afgooditemslore.reload")) {
-                commandSender.sendMessage(Hex.color(plugin.getConfig().getString("messages.no-permission")));
+                commandSender.sendMessage(Hex.color(plugin.noPermission));
                 return false;
             }
 
             plugin.reloadConfig();
-            commandSender.sendMessage(Hex.color(plugin.getConfig().getString("messages.reloaded")));
+            commandSender.sendMessage(Hex.color(plugin.reloaded));
         }
         return true;
     }

@@ -3,6 +3,7 @@ package ru.anton_flame.afgooditemslore.tasks;
 import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
 import org.bukkit.ChatColor;
+import org.bukkit.Material;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.enchantments.Enchantment;
 import org.bukkit.entity.Player;
@@ -32,14 +33,15 @@ public class LoreUpdateTask extends BukkitRunnable {
     public void run() {
         for (Player player : Bukkit.getOnlinePlayers()) {
             for (ItemStack item : player.getInventory().getContents()) {
-                if (item == null) continue;
+                if (item == null || item.getType() == Material.AIR) continue;
                 if (!item.hasItemMeta()) continue;
+
+                String enchantFormat = plugin.enchantFormat;
+                String effectFormat = plugin.effectFormat;
 
                 ItemMeta meta = item.getItemMeta();
                 List<Component> lore = new ArrayList<>();
                 if (meta.lore() != null) {
-                    String enchantFormat = plugin.getConfig().getString("settings.enchant-format");
-                    String effectFormat = plugin.getConfig().getString("settings.effect-format");
                     String strippedEnchantStart = ChatColor.stripColor(Hex.color(enchantFormat.split("%")[0]));
                     String strippedEffectStart = ChatColor.stripColor(Hex.color(effectFormat.split("%")[0]));
 
@@ -54,8 +56,7 @@ public class LoreUpdateTask extends BukkitRunnable {
                 }
 
                 if (meta.hasEnchants()) {
-                    String enchantFormat = plugin.getConfig().getString("settings.enchant-format");
-                    ConfigurationSection enchantsSection = plugin.getConfig().getConfigurationSection("settings.enchants");
+                    ConfigurationSection enchantsSection = plugin.enchantsSection;
 
                     for (Map.Entry<Enchantment, Integer> entry : meta.getEnchants().entrySet()) {
                         Enchantment enchantment = entry.getKey();
@@ -71,8 +72,7 @@ public class LoreUpdateTask extends BukkitRunnable {
 
                 if (meta instanceof PotionMeta) {
                     PotionMeta potionMeta = (PotionMeta) meta;
-                    String effectFormat = plugin.getConfig().getString("settings.effect-format");
-                    ConfigurationSection effectsSection = plugin.getConfig().getConfigurationSection("settings.effects");
+                    ConfigurationSection effectsSection = plugin.effectsSection;
 
                     if (potionMeta.hasCustomEffects()) {
                         for (PotionEffect potionEffect : potionMeta.getCustomEffects()) {
@@ -183,7 +183,7 @@ public class LoreUpdateTask extends BukkitRunnable {
 
     private String formatDuration(int seconds) {
         if (seconds == 0) {
-            return plugin.getConfig().getString("settings.zero-effect-duration");
+            return plugin.zeroEffectDuration;
         }
 
         StringBuilder result = new StringBuilder();
