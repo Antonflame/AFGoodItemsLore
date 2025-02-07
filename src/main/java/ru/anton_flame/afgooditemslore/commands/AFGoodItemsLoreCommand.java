@@ -34,6 +34,7 @@ public class AFGoodItemsLoreCommand implements CommandExecutor, TabCompleter {
             }
 
             plugin.reloadConfig();
+            plugin.setupConfigValues();
             commandSender.sendMessage(Hex.color(plugin.reloaded));
         }
         return true;

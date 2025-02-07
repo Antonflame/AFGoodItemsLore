@@ -19,9 +19,7 @@ import org.bukkit.scheduler.BukkitRunnable;
 import ru.anton_flame.afgooditemslore.AFGoodItemsLore;
 import ru.anton_flame.afgooditemslore.utils.Hex;
 
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 public class LoreUpdateTask extends BukkitRunnable {
     private final AFGoodItemsLore plugin;
@@ -38,38 +36,80 @@ public class LoreUpdateTask extends BukkitRunnable {
 
                 String enchantFormat = plugin.enchantFormat;
                 String effectFormat = plugin.effectFormat;
+                List<String> enchantsFormat = plugin.enchantsFormat;
+                List<String> effectsFormat = plugin.effectsFormat;
 
                 ItemMeta meta = item.getItemMeta();
                 List<Component> lore = new ArrayList<>();
+
+                Set<String> processedLines = new HashSet<>();
                 if (meta.lore() != null) {
-                    String strippedEnchantStart = ChatColor.stripColor(Hex.color(enchantFormat.split("%")[0]));
-                    String strippedEffectStart = ChatColor.stripColor(Hex.color(effectFormat.split("%")[0]));
-
                     for (Component line : meta.lore()) {
-                        String plainText = line.toString();
-                        String strippedLine = ChatColor.stripColor(plainText);
+                        String plainText = ChatColor.stripColor(line.toString());
 
-                        if (!strippedLine.startsWith(strippedEnchantStart) && !strippedLine.startsWith(strippedEffectStart)) {
+                        boolean isEnchantOrEffect = false;
+
+                        if (enchantsFormat != null && !enchantsFormat.isEmpty()) {
+                            for (String enchantLine : enchantsFormat) {
+                                if (plainText.startsWith(extractCleanPrefix(enchantLine))) {
+                                    isEnchantOrEffect = true;
+                                    break;
+                                }
+                            }
+                        }
+
+                        if (effectsFormat != null && !effectsFormat.isEmpty()) {
+                            for (String effectLine : effectsFormat) {
+                                if (plainText.startsWith(extractCleanPrefix(effectLine))) {
+                                    isEnchantOrEffect = true;
+                                    break;
+                                }
+                            }
+                        }
+
+                        if (!isEnchantOrEffect && !processedLines.contains(plainText)) {
                             lore.add(line);
+                            processedLines.add(plainText);
                         }
                     }
                 }
 
+                List<String> enchantsList = new ArrayList<>();
                 if (meta.hasEnchants()) {
                     ConfigurationSection enchantsSection = plugin.enchantsSection;
 
                     for (Map.Entry<Enchantment, Integer> entry : meta.getEnchants().entrySet()) {
                         Enchantment enchantment = entry.getKey();
                         if (enchantment == null) continue;
+
                         String enchant = enchantsSection.getString(entry.getKey().getName());
                         String level = String.valueOf(entry.getValue());
                         String format = Hex.color(enchantFormat.replace("%enchant%", enchant).replace("%level%", level));
-                        lore.add(Component.text(format));
+                        enchantsList.add(format);
+                    }
+
+                    for (String line : enchantsFormat) {
+                        if (line.contains("%enchants%")) {
+                            for (String enchant : enchantsList) {
+                                String strippedEnchant = ChatColor.stripColor(enchant);
+                                if (!processedLines.contains(strippedEnchant)) {
+                                    lore.add(Component.text(Hex.color(enchant)));
+                                    processedLines.add(strippedEnchant);
+                                }
+                            }
+                        } else {
+                            String strippedLine = ChatColor.stripColor(line);
+                            if (!processedLines.contains(strippedLine)) {
+                                lore.add(Component.text(Hex.color(line)));
+                                processedLines.add(strippedLine);
+                            }
+                        }
                     }
 
                     meta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
                 }
 
+                List<String> effectsList = new ArrayList<>();
                 if (meta instanceof PotionMeta) {
                     PotionMeta potionMeta = (PotionMeta) meta;
                     ConfigurationSection effectsSection = plugin.effectsSection;
@@ -82,13 +122,14 @@ public class LoreUpdateTask extends BukkitRunnable {
                             String format = Hex.color(effectFormat.replace("%type%", type)
                                     .replace("%level%", level)
                                     .replace("%duration%", duration));
-                            lore.add(Component.text(format));
+                            effectsList.add(format);
                         }
                     } else {
                         PotionData potionData = potionMeta.getBasePotionData();
                         PotionEffectType potionType = potionData.getType().getEffectType();
                         boolean isUpgraded = potionData.isUpgraded();
                         boolean isExtended = potionData.isExtended();
+
                         if (potionType == null) continue;
 
                         if (potionData.getType() == PotionType.TURTLE_MASTER) {
@@ -98,14 +139,14 @@ public class LoreUpdateTask extends BukkitRunnable {
                             String slowFormat = Hex.color(effectFormat.replace("%type%", slowType)
                                     .replace("%level%", slowLevel)
                                     .replace("%duration%", duration));
-                            lore.add(Component.text(slowFormat));
+                            effectsList.add(slowFormat);
 
                             String resistanceType = effectsSection.getString("DAMAGE_RESISTANCE");
                             String resistanceLevel = isUpgraded ? "4" : "3";
                             String resistanceFormat = Hex.color(effectFormat.replace("%type%", resistanceType)
                                     .replace("%level%", resistanceLevel)
                                     .replace("%duration%", duration));
-                            lore.add(Component.text(resistanceFormat));
+                            effectsList.add(resistanceFormat);
                         } else {
                             String type = effectsSection.getString(potionType.getName());
                             String level = isUpgraded ? "2" : "1";
@@ -113,7 +154,25 @@ public class LoreUpdateTask extends BukkitRunnable {
                             String format = Hex.color(effectFormat.replace("%type%", type)
                                     .replace("%level%", level)
                                     .replace("%duration%", duration));
-                            lore.add(Component.text(format));
+                            effectsList.add(format);
+                        }
+                    }
+
+                    for (String line : effectsFormat) {
+                        if (line.contains("%effects%")) {
+                            for (String effect : effectsList) {
+                                String strippedEffect = ChatColor.stripColor(effect);
+                                if (!processedLines.contains(strippedEffect)) {
+                                    lore.add(Component.text(Hex.color(effect)));
+                                    processedLines.add(strippedEffect);
+                                }
+                            }
+                        } else {
+                            String strippedLine = ChatColor.stripColor(line);
+                            if (!processedLines.contains(strippedLine)) {
+                                lore.add(Component.text(Hex.color(line)));
+                                processedLines.add(strippedLine);
+                            }
                         }
                     }
 
@@ -126,9 +185,21 @@ public class LoreUpdateTask extends BukkitRunnable {
         }
     }
 
+    private String extractCleanPrefix(String format) {
+        if (format == null || !format.contains("%")) return "";
+        String prefix = format.split("%")[0].trim();
+        return ChatColor.stripColor(prefix);
+    }
+
     private int getBaseEffectDuration(PotionData potionData, PotionEffectType type, boolean isUpgraded, boolean isExtended) {
         int duration = 0;
         switch (type.getName()) {
+            case "NIGHT_VISION":
+            case "WEAKNESS":
+            case "SLOW_FALLING":
+                duration = 90;
+                if (isExtended) duration = 240;
+                break;
             case "INVISIBILITY":
             case "FIRE_RESISTANCE":
             case "WATER_BREATHING":
@@ -161,11 +232,6 @@ public class LoreUpdateTask extends BukkitRunnable {
                 duration = 45;
                 if (isExtended) duration = 90;
                 if (isUpgraded) duration = 22;
-                break;
-            case "WEAKNESS":
-            case "SLOW_FALLING":
-                duration = 90;
-                if (isExtended) duration = 240;
                 break;
             case "LUCK":
                 duration = 300;

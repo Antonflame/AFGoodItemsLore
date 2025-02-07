@@ -7,8 +7,13 @@
 # Автор плагина: anton_flame (ТГК: https://t.me/anton_flame_coder)
 
 settings:
-  # Формат описания эффектов
+  # Формат вывода эффекта в описании
   effect-format: "&6%type% %level% &f(&6%duration%&f)"
+  # Формат вывода эффектов в описании
+  effects-format:
+    - "&fЭффекты:"
+    - ""
+    - "%effects%"
   # Строка, которая будет выведена вместо длительности эффекта, если длительность 0
   zero-effect-duration: "0 сек"
   # Названия эффектов (обязательно капсом)
@@ -42,8 +47,13 @@ settings:
     WEAKNESS: "Слабость"
     WITHER: "Иссушение"
 
-  # Формат описания зачарований
+  # Формат вывода зачарования в описании
   enchant-format: "&6%enchant% %level%"
+  # Формат вывода зачарований в описании
+  enchants-format:
+    - "&fЗачарования:"
+    - ""
+    - "%enchants%"
   # Названия зачарований
   enchants:
     PROTECTION_ENVIRONMENTAL: "Защита"

@@ -1,6 +1,5 @@
 package ru.anton_flame.afgooditemslore;
 
-import org.bukkit.Bukkit;
 import org.bukkit.command.PluginCommand;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.plugin.java.JavaPlugin;
@@ -12,7 +11,7 @@ import java.util.List;
 public final class AFGoodItemsLore extends JavaPlugin {
 
     public String effectFormat, zeroEffectDuration, enchantFormat, noPermission, reloaded;
-    public List<String> help;
+    public List<String> effectsFormat, enchantsFormat, help;
     public ConfigurationSection effectsSection, enchantsSection;
 
     @Override
@@ -22,11 +21,12 @@ public final class AFGoodItemsLore extends JavaPlugin {
         setupConfigValues();
 
         PluginCommand afGoodItemsLoreCommand = getCommand("afgooditemslore");
-        afGoodItemsLoreCommand.setExecutor(new AFGoodItemsLoreCommand(this));
-        afGoodItemsLoreCommand.setTabCompleter(new AFGoodItemsLoreCommand(this));
+        AFGoodItemsLoreCommand commandClass = new AFGoodItemsLoreCommand(this);
+        afGoodItemsLoreCommand.setExecutor(commandClass);
+        afGoodItemsLoreCommand.setTabCompleter(commandClass);
 
         LoreUpdateTask loreUpdateTask = new LoreUpdateTask(this);
-        loreUpdateTask.runTaskTimerAsynchronously(this, 0, 60);
+        loreUpdateTask.runTaskTimerAsynchronously(this, 0, 20);
     }
 
     @Override
@@ -42,6 +42,8 @@ public final class AFGoodItemsLore extends JavaPlugin {
         enchantsSection = getConfig().getConfigurationSection("settings.enchants");
         noPermission = getConfig().getString("messages.no-permission");
         reloaded = getConfig().getString("messages.reloaded");
+        effectsFormat = getConfig().getStringList("settings.effects-format");
+        enchantsFormat = getConfig().getStringList("settings.enchants-format");
         help = getConfig().getStringList("messages.help");
     }
 }
