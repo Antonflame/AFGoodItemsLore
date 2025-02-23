@@ -1,8 +1,6 @@
 package ru.anton_flame.afgooditemslore.tasks;
 
-import net.kyori.adventure.text.Component;
 import org.bukkit.Bukkit;
-import org.bukkit.ChatColor;
 import org.bukkit.Material;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.enchantments.Enchantment;
@@ -11,15 +9,19 @@ import org.bukkit.inventory.ItemFlag;
 import org.bukkit.inventory.ItemStack;
 import org.bukkit.inventory.meta.ItemMeta;
 import org.bukkit.inventory.meta.PotionMeta;
+import org.bukkit.persistence.PersistentDataContainer;
+import org.bukkit.persistence.PersistentDataType;
 import org.bukkit.potion.PotionData;
 import org.bukkit.potion.PotionEffect;
 import org.bukkit.potion.PotionEffectType;
 import org.bukkit.potion.PotionType;
 import org.bukkit.scheduler.BukkitRunnable;
 import ru.anton_flame.afgooditemslore.AFGoodItemsLore;
-import ru.anton_flame.afgooditemslore.utils.Hex;
+import ru.anton_flame.afgooditemslore.utils.ConfigManager;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 
 public class LoreUpdateTask extends BukkitRunnable {
     private final AFGoodItemsLore plugin;
@@ -29,170 +31,147 @@ public class LoreUpdateTask extends BukkitRunnable {
 
     @Override
     public void run() {
-        for (Player player : Bukkit.getOnlinePlayers()) {
-            for (ItemStack item : player.getInventory().getContents()) {
-                if (item == null || item.getType() == Material.AIR) continue;
-                if (!item.hasItemMeta()) continue;
+        for (Player onlinePlayer : Bukkit.getOnlinePlayers()) {
+            for (ItemStack item : onlinePlayer.getInventory().getContents()) {
+                if (item == null || item.getType() == Material.AIR || !item.hasItemMeta()) continue;
+                ItemMeta itemMeta = item.getItemMeta();
+                PersistentDataContainer container = itemMeta.getPersistentDataContainer();
 
-                String enchantFormat = plugin.enchantFormat;
-                String effectFormat = plugin.effectFormat;
-                List<String> enchantsFormat = plugin.enchantsFormat;
-                List<String> effectsFormat = plugin.effectsFormat;
+                itemMeta.addItemFlags(ItemFlag.HIDE_POTION_EFFECTS, ItemFlag.HIDE_ENCHANTS);
 
-                ItemMeta meta = item.getItemMeta();
-                List<Component> lore = new ArrayList<>();
+                String effectFormat = ConfigManager.effectFormat;
+                List<String> effectsFormat = ConfigManager.effectsFormat;
+                ConfigurationSection effectLevels = ConfigManager.effectLevels;
+                ConfigurationSection effectsSection = ConfigManager.effectsSection;
 
-                Set<String> processedLines = new HashSet<>();
-                if (meta.lore() != null) {
-                    for (Component line : meta.lore()) {
-                        String plainText = ChatColor.stripColor(line.toString());
+                String enchantFormat = ConfigManager.enchantFormat;
+                List<String> enchantsFormat = ConfigManager.enchantsFormat;
+                ConfigurationSection enchantLevels = ConfigManager.enchantLevels;
+                ConfigurationSection enchantsSection = ConfigManager.enchantsSection;
 
-                        boolean isEnchantOrEffect = false;
-
-                        if (enchantsFormat != null && !enchantsFormat.isEmpty()) {
-                            for (String enchantLine : enchantsFormat) {
-                                if (plainText.startsWith(extractCleanPrefix(enchantLine))) {
-                                    isEnchantOrEffect = true;
+                int sectionStartIndex = -1;
+                List<String> lore = itemMeta.getLore();
+                if (lore == null) {
+                    lore = new ArrayList<>();
+                } else {
+                    if (container.getOrDefault(plugin.hasEffects, PersistentDataType.INTEGER, 0) == 1) {
+                        int maxIndex = lore.size() - effectsFormat.size();
+                        for (int i = 0; i <= maxIndex; i++) {
+                            boolean isSectionMatch = true;
+                            for (int j = 0; j < effectsFormat.size(); j++) {
+                                if (!lore.get(i + j).equalsIgnoreCase(effectsFormat.get(j))) {
+                                    isSectionMatch = false;
                                     break;
                                 }
                             }
+                            if (isSectionMatch) {
+                                sectionStartIndex = i;
+                                break;
+                            }
                         }
-
-                        if (effectsFormat != null && !effectsFormat.isEmpty()) {
-                            for (String effectLine : effectsFormat) {
-                                if (plainText.startsWith(extractCleanPrefix(effectLine))) {
-                                    isEnchantOrEffect = true;
+                    } else if (container.getOrDefault(plugin.hasEnchants, PersistentDataType.INTEGER, 0) == 1) {
+                        int maxIndex = lore.size() - enchantsFormat.size();
+                        for (int i = 0; i <= maxIndex; i++) {
+                            boolean isSectionMatch = true;
+                            for (int j = 0; j < enchantsFormat.size(); j++) {
+                                if (!lore.get(i + j).equalsIgnoreCase(enchantsFormat.get(j))) {
+                                    isSectionMatch = false;
                                     break;
                                 }
                             }
-                        }
-
-                        if (!isEnchantOrEffect && !processedLines.contains(plainText)) {
-                            lore.add(line);
-                            processedLines.add(plainText);
+                            if (isSectionMatch) {
+                                sectionStartIndex = i;
+                                break;
+                            }
                         }
                     }
                 }
 
-                List<String> enchantsList = new ArrayList<>();
-                if (meta.hasEnchants()) {
-                    ConfigurationSection enchantsSection = plugin.enchantsSection;
-
-                    for (Map.Entry<Enchantment, Integer> entry : meta.getEnchants().entrySet()) {
-                        Enchantment enchantment = entry.getKey();
-                        if (enchantment == null) continue;
-
-                        String enchant = enchantsSection.getString(entry.getKey().getName());
-                        String level = String.valueOf(entry.getValue());
-                        String format = Hex.color(enchantFormat.replace("%enchant%", enchant).replace("%level%", level));
-                        enchantsList.add(format);
+                if (sectionStartIndex != -1) {
+                    int sectionSize = container.getOrDefault(plugin.stringsCount, PersistentDataType.INTEGER, 0);
+                    for (int i = 0; i < sectionSize; i++) {
+                        lore.remove(sectionStartIndex);
                     }
-
-                    for (String line : enchantsFormat) {
-                        if (line.contains("%enchants%")) {
-                            for (String enchant : enchantsList) {
-                                String strippedEnchant = ChatColor.stripColor(enchant);
-                                if (!processedLines.contains(strippedEnchant)) {
-                                    lore.add(Component.text(Hex.color(enchant)));
-                                    processedLines.add(strippedEnchant);
-                                }
-                            }
-                        } else {
-                            String strippedLine = ChatColor.stripColor(line);
-                            if (!processedLines.contains(strippedLine)) {
-                                lore.add(Component.text(Hex.color(line)));
-                                processedLines.add(strippedLine);
-                            }
-                        }
-                    }
-
-                    meta.addItemFlags(ItemFlag.HIDE_ENCHANTS);
                 }
 
-                List<String> effectsList = new ArrayList<>();
-                if (meta instanceof PotionMeta) {
-                    PotionMeta potionMeta = (PotionMeta) meta;
-                    ConfigurationSection effectsSection = plugin.effectsSection;
-
+                int stringsCount = 0;
+                if (itemMeta instanceof PotionMeta) {
+                    PotionMeta potionMeta = (PotionMeta) itemMeta;
+                    stringsCount += effectsFormat.size();
+                    lore.addAll(effectsFormat);
                     if (potionMeta.hasCustomEffects()) {
                         for (PotionEffect potionEffect : potionMeta.getCustomEffects()) {
-                            String type = effectsSection.getString(potionEffect.getType().getName());
-                            String level = String.valueOf(potionEffect.getAmplifier() + 1);
+                            String name = effectsSection.getString(potionEffect.getType().getName());
+                            String level = effectLevels.getString(String.valueOf(potionEffect.getAmplifier() + 1));
                             String duration = formatDuration(potionEffect.getDuration() / 20);
-                            String format = Hex.color(effectFormat.replace("%type%", type)
-                                    .replace("%level%", level)
-                                    .replace("%duration%", duration));
-                            effectsList.add(format);
+                            String format = effectFormat.replace("%type%", name).replace("%level%", level).replace("%duration%", duration);
+
+                            lore.add(format);
+                            stringsCount++;
                         }
                     } else {
                         PotionData potionData = potionMeta.getBasePotionData();
-                        PotionEffectType potionType = potionData.getType().getEffectType();
-                        boolean isUpgraded = potionData.isUpgraded();
-                        boolean isExtended = potionData.isExtended();
-
-                        if (potionType == null) continue;
 
                         if (potionData.getType() == PotionType.TURTLE_MASTER) {
-                            String slowType = effectsSection.getString("SLOW");
-                            String slowLevel = isUpgraded ? "6" : "4";
-                            String duration = formatDuration(getBaseEffectDuration(potionData, PotionEffectType.SLOW, isUpgraded, isExtended));
-                            String slowFormat = Hex.color(effectFormat.replace("%type%", slowType)
+                            String slowName = effectsSection.getString(PotionEffectType.SLOW.getName());
+                            String slowLevel = String.valueOf(potionData.isUpgraded() ? 6 : 4);
+                            String slowDuration = formatDuration(getBaseEffectDuration(potionData));
+                            String slowFormat = effectFormat.replace("%type%", slowName)
                                     .replace("%level%", slowLevel)
-                                    .replace("%duration%", duration));
-                            effectsList.add(slowFormat);
+                                    .replace("%duration%", slowDuration);
+                            lore.add(slowFormat);
 
-                            String resistanceType = effectsSection.getString("DAMAGE_RESISTANCE");
-                            String resistanceLevel = isUpgraded ? "4" : "3";
-                            String resistanceFormat = Hex.color(effectFormat.replace("%type%", resistanceType)
+                            String resistanceName = effectsSection.getString(PotionEffectType.DAMAGE_RESISTANCE.getName());
+                            String resistanceLevel = String.valueOf(potionData.isUpgraded() ? 4 : 3);
+                            String resistanceDuration = formatDuration(getBaseEffectDuration(potionData));
+                            String resistanceFormat = effectFormat.replace("%type%", resistanceName)
                                     .replace("%level%", resistanceLevel)
-                                    .replace("%duration%", duration));
-                            effectsList.add(resistanceFormat);
+                                    .replace("%duration%", resistanceDuration);
+                            lore.add(resistanceFormat);
+
+                            stringsCount += 2;
                         } else {
-                            String type = effectsSection.getString(potionType.getName());
-                            String level = isUpgraded ? "2" : "1";
-                            String duration = formatDuration(getBaseEffectDuration(potionData, potionType, isUpgraded, isExtended));
-                            String format = Hex.color(effectFormat.replace("%type%", type)
-                                    .replace("%level%", level)
-                                    .replace("%duration%", duration));
-                            effectsList.add(format);
+                            String name = effectsSection.getString(potionData.getType().getEffectType().getName());
+                            String level = effectLevels.getString(String.valueOf(potionData.isUpgraded() ? 2 : 1));
+                            String duration = formatDuration(getBaseEffectDuration(potionData));
+                            String format = effectFormat.replace("%type%", name)
+                                    .replace("%level%", String.valueOf(level))
+                                    .replace("%duration%", String.valueOf(duration));
+
+                            lore.add(format);
+                            stringsCount++;
                         }
                     }
-
-                    for (String line : effectsFormat) {
-                        if (line.contains("%effects%")) {
-                            for (String effect : effectsList) {
-                                String strippedEffect = ChatColor.stripColor(effect);
-                                if (!processedLines.contains(strippedEffect)) {
-                                    lore.add(Component.text(Hex.color(effect)));
-                                    processedLines.add(strippedEffect);
-                                }
-                            }
-                        } else {
-                            String strippedLine = ChatColor.stripColor(line);
-                            if (!processedLines.contains(strippedLine)) {
-                                lore.add(Component.text(Hex.color(line)));
-                                processedLines.add(strippedLine);
-                            }
-                        }
-                    }
-
-                    meta.addItemFlags(ItemFlag.HIDE_POTION_EFFECTS);
                 }
 
-                meta.lore(lore);
-                item.setItemMeta(meta);
+                if (itemMeta.hasEnchants()) {
+                    stringsCount += enchantsFormat.size();
+                    lore.addAll(enchantsFormat);
+                    for (Map.Entry<Enchantment, Integer> enchantmentIntegerEntry : itemMeta.getEnchants().entrySet()) {
+                        String name = enchantsSection.getString(enchantmentIntegerEntry.getKey().getName());
+                        String level = enchantLevels.getString(String.valueOf(enchantmentIntegerEntry.getValue()));
+                        String format = enchantFormat.replace("%enchant%", name).replace("%level%", level);
+
+                        lore.add(format);
+                        stringsCount++;
+                    }
+                }
+
+                container.set(plugin.hasEffects, PersistentDataType.INTEGER, itemMeta instanceof PotionMeta ? 1 : 0);
+                container.set(plugin.hasEnchants, PersistentDataType.INTEGER, itemMeta.hasEnchants() ? 1 : 0);
+                container.set(plugin.stringsCount, PersistentDataType.INTEGER, stringsCount);
+                itemMeta.setLore(lore);
+                item.setItemMeta(itemMeta);
             }
         }
     }
 
-    private String extractCleanPrefix(String format) {
-        if (format == null || !format.contains("%")) return "";
-        String prefix = format.split("%")[0].trim();
-        return ChatColor.stripColor(prefix);
-    }
-
-    private int getBaseEffectDuration(PotionData potionData, PotionEffectType type, boolean isUpgraded, boolean isExtended) {
+    private int getBaseEffectDuration(PotionData potionData) {
+        PotionEffectType type = potionData.getType().getEffectType();
+        boolean isExtended = potionData.isExtended();
+        boolean isUpgraded = potionData.isUpgraded();
         int duration = 0;
+
         switch (type.getName()) {
             case "NIGHT_VISION":
             case "WEAKNESS":
@@ -244,12 +223,13 @@ public class LoreUpdateTask extends BukkitRunnable {
                 }
                 break;
         }
+
         return duration;
     }
 
     private String formatDuration(int seconds) {
         if (seconds == 0) {
-            return plugin.zeroEffectDuration;
+            return ConfigManager.zeroEffectDuration;
         }
 
         StringBuilder result = new StringBuilder();

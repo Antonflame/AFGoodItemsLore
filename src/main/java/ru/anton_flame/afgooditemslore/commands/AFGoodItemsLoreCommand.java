@@ -7,6 +7,7 @@ import org.bukkit.command.TabCompleter;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import ru.anton_flame.afgooditemslore.AFGoodItemsLore;
+import ru.anton_flame.afgooditemslore.utils.ConfigManager;
 import ru.anton_flame.afgooditemslore.utils.Hex;
 
 import java.util.Collections;
@@ -21,21 +22,21 @@ public class AFGoodItemsLoreCommand implements CommandExecutor, TabCompleter {
     @Override
     public boolean onCommand(@NotNull CommandSender commandSender, @NotNull Command command, @NotNull String s, @NotNull String[] strings) {
         if (strings.length < 1 || !strings[0].equalsIgnoreCase("reload")) {
-            for (String message : plugin.help) {
-                commandSender.sendMessage(Hex.color(message));
+            for (String message : ConfigManager.help) {
+                commandSender.sendMessage(message);
             }
             return false;
         }
 
         if (strings.length == 1 && strings[0].equalsIgnoreCase("reload")) {
             if (!commandSender.hasPermission("afgooditemslore.reload")) {
-                commandSender.sendMessage(Hex.color(plugin.noPermission));
+                commandSender.sendMessage(ConfigManager.noPermission);
                 return false;
             }
 
             plugin.reloadConfig();
-            plugin.setupConfigValues();
-            commandSender.sendMessage(Hex.color(plugin.reloaded));
+            ConfigManager.setupConfigValues(plugin);
+            commandSender.sendMessage(ConfigManager.reloaded);
         }
         return true;
     }
@@ -45,6 +46,7 @@ public class AFGoodItemsLoreCommand implements CommandExecutor, TabCompleter {
         if (args.length == 1) {
             return Collections.singletonList("reload");
         }
+
         return Collections.emptyList();
     }
 }

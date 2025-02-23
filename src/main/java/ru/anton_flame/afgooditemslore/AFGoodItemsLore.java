@@ -1,24 +1,26 @@
 package ru.anton_flame.afgooditemslore;
 
+import org.bukkit.NamespacedKey;
 import org.bukkit.command.PluginCommand;
 import org.bukkit.configuration.ConfigurationSection;
 import org.bukkit.plugin.java.JavaPlugin;
 import ru.anton_flame.afgooditemslore.commands.AFGoodItemsLoreCommand;
 import ru.anton_flame.afgooditemslore.tasks.LoreUpdateTask;
+import ru.anton_flame.afgooditemslore.utils.ConfigManager;
 
 import java.util.List;
 
 public final class AFGoodItemsLore extends JavaPlugin {
 
-    public String effectFormat, zeroEffectDuration, enchantFormat, noPermission, reloaded;
-    public List<String> effectsFormat, enchantsFormat, help;
-    public ConfigurationSection effectsSection, enchantsSection;
+    public NamespacedKey hasEffects = new NamespacedKey(this, "has_effects");
+    public NamespacedKey hasEnchants = new NamespacedKey(this, "has_enchants");
+    public NamespacedKey stringsCount = new NamespacedKey(this, "string_counts");
 
     @Override
     public void onEnable() {
         getLogger().info("Плагин был включен!");
         saveDefaultConfig();
-        setupConfigValues();
+        ConfigManager.setupConfigValues(this);
 
         PluginCommand afGoodItemsLoreCommand = getCommand("afgooditemslore");
         AFGoodItemsLoreCommand commandClass = new AFGoodItemsLoreCommand(this);
@@ -32,18 +34,5 @@ public final class AFGoodItemsLore extends JavaPlugin {
     @Override
     public void onDisable() {
         getLogger().info("Плагин был выключен!");
-    }
-
-    public void setupConfigValues() {
-        effectFormat = getConfig().getString("settings.effect-format");
-        zeroEffectDuration = getConfig().getString("settings.zero-effect-duration");
-        enchantFormat = getConfig().getString("settings.enchant-format");
-        effectsSection = getConfig().getConfigurationSection("settings.effects");
-        enchantsSection = getConfig().getConfigurationSection("settings.enchants");
-        noPermission = getConfig().getString("messages.no-permission");
-        reloaded = getConfig().getString("messages.reloaded");
-        effectsFormat = getConfig().getStringList("settings.effects-format");
-        enchantsFormat = getConfig().getStringList("settings.enchants-format");
-        help = getConfig().getStringList("messages.help");
     }
 }

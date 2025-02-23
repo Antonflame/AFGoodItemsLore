@@ -13,7 +13,18 @@ settings:
   effects-format:
     - "&fЭффекты:"
     - ""
-    - "%effects%"
+  # Формат уровней эффектов
+  effect-levels:
+    1: "I"
+    2: "II"
+    3: "III"
+    4: "IV"
+    5: "V"
+    6: "VI"
+    7: "VII"
+    8: "VIII"
+    9: "IX"
+    10: "X"
   # Строка, которая будет выведена вместо длительности эффекта, если длительность 0
   zero-effect-duration: "0 сек"
   # Названия эффектов (обязательно капсом)
@@ -53,7 +64,18 @@ settings:
   enchants-format:
     - "&fЗачарования:"
     - ""
-    - "%enchants%"
+  # Формат уровней зачарований
+  enchant-levels:
+    1: "I"
+    2: "II"
+    3: "III"
+    4: "IV"
+    5: "V"
+    6: "VI"
+    7: "VII"
+    8: "VIII"
+    9: "IX"
+    10: "X"
   # Названия зачарований
   enchants:
     PROTECTION_ENVIRONMENTAL: "Защита"
